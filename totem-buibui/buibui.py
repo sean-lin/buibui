@@ -1,6 +1,7 @@
 import time
-from gi.repository import GObject, Peas, Gtk, GLib, GtkClutter, Clutter
-from danmaku import DanmakuStream
+from gi.repository import GtkClutter    # pylint: disable=W0611
+from gi.repository import GObject, Peas, GLib, Clutter
+import danmaku
 
 
 class Buibui(GObject.Object, Peas.Activatable):
@@ -17,7 +18,7 @@ class Buibui(GObject.Object, Peas.Activatable):
 
         video = self._totem.get_video_widget()
         self._dm = DanmakuManager(self._totem)
-        self._dm.set_stream('127.0.0.1', 80)
+        self._dm.set_stream('http://127.0.0.1/')
 
         video.get_stage().add_child(self._dm)
         video.get_toplevel().connect(
@@ -50,40 +51,238 @@ class Buibui(GObject.Object, Peas.Activatable):
         self._dm.clear()
 
 
-class DanmakuWrapper(Clutter.Group):
-    def __init__(self, dmk):
-        super(DanmakuWrapper, self).__init__()
-        self.dmk = dmk
-        text = Clutter.Text()
-        text.set_color(Clutter.Color.from_string(dmk.color)[1])
-        text.set_text(dmk.text)
-        text.set_font_name(dmk.font)
-        self._drawObject = text
+class Danmaku(Clutter.Group):
+    DEFAULT_FONT = 'SimHei'
 
-        self._shadowBR = self.build_shadow(dmk, +1, +1)
-        self._shadowTL = self.build_shadow(dmk, -1, -1)
-        self._shadowBL = self.build_shadow(dmk, -1, +1)
-        self._shadowTR = self.build_shadow(dmk, +1, -1)
+    def __init__(self, text, color="#ffffff", size=25):
+        super(Danmaku, self).__init__()
 
-        self.add_child(text)
+        # orgion configure
+        self.text = text
+        self.color = color
+        self.font_name = self.DEFAULT_FONT
+        self.size = size
 
-        self._width = self._drawObject.get_width() + 1
-        self._height = self._drawObject.get_height() + 1
+        # runtime value
+        self.duration = 0
+        self.x = None
+        self.y = None
+        self._s_width = None
+        self._s_height = None
 
-    def build_shadow(self, dmk, x, y):
-        shadow = Clutter.Text()
-        shadow.set_color(Clutter.Color.from_string("#000000")[1])
-        shadow.set_text(dmk.text)
-        shadow.set_font_name(dmk.font)
-        shadow.set_position(x, y)
-        self.add_child(shadow)
+        # clutters
+        self._shadowBR = self.build_shadow(+2, +2)
+        self._shadowTL = self.build_shadow(-2, -2)
+        self._shadowBL = self.build_shadow(-2, +2)
+        self._shadowTR = self.build_shadow(+2, -2)
+        self._drawObject = self.build_text_clutter(self.color, 0, 0)
 
-    def tick(self, now):
-        if self.dmk.tick(now):
-            self.set_position(self.dmk.x, self.dmk.y)
+        self.width = self._drawObject.get_width() + 2
+        self.height = self._drawObject.get_height() + 2
+
+    def setup_ctx(self, s_width, s_height):
+        self._s_width = s_width
+        self._s_height = s_height
+        return self
+
+    def start(self):
+        raise NotImplementedError
+
+    def update(self, duration):
+        raise NotImplementedError
+
+    def tick(self, duration):
+        self.duration += duration
+        if self.update(duration):
+            self.set_position(self.x, self.y)
             return True
         else:
             return False
+
+    def get_font_string(self):
+        return "%s %d" % (self.font_name, self.size)
+
+    def build_shadow(self, x, y):
+        return self.build_text_clutter("#000000", x, y)
+
+    def build_text_clutter(self, color, x, y):
+        shadow = Clutter.Text()
+        shadow.set_color(Clutter.Color.from_string(color)[1])
+        shadow.set_text(self.text)
+        shadow.set_font_name(self.get_font_string())
+        shadow.set_position(x, y)
+        self.add_child(shadow)
+        return shadow
+
+
+class DanmakuRight2Left(Danmaku):
+    mode = danmaku.D_MODE_RIGHT2LEFT
+
+    def start(self):
+        self.x = self._s_width
+        return self
+
+    def update(self, duration):
+        self.x -= 1
+        if self.x + self.width < 0:
+            return False
+        return True
+
+
+class DanmakuLeft2Right(Danmaku):
+    mode = danmaku.D_MODE_LEFT2RIGHT
+
+    def start(self):
+        self.x = - self.width
+        return self
+
+    def update(self, duration):
+        self.x += 1
+        if self.x > self._s_width:
+            return False
+        return True
+
+TTL = 3000
+
+
+class DanmakuTop(Danmaku):
+    mode = danmaku.D_MODE_TOP
+
+    def start(self):
+        self.x = int((self._s_width - self.width) / 2)
+        print self.x
+        return self
+
+    def update(self, duration):
+        return self.duration < TTL
+
+
+class DanmakuBottom(Danmaku):
+    mode = danmaku.D_MODE_BOTTOM
+
+    def start(self):
+        self.x = int((self._s_width - self.width) / 2)
+        return self
+
+    def update(self, duration):
+        return self.duration < TTL
+
+
+HORIZONTAL_PADDING = 20
+
+
+class AllocaotrLayerBase(object):
+    def __init__(self, offset):
+        self.offset = offset
+        self.pool = set()
+
+    def allocate(self, dmk):
+        base_line = self.get_slots()
+        y = self.offset
+        if len(base_line) == 0:
+            dmk.y = y
+            self.pool.add(dmk)
+            return True
+
+        for i in base_line:
+            if (i.y > y and i.y + i.height > y) or\
+                    (y > i.y and y + dmk.height > i.y):
+                dmk.y = y
+                self.pool.add(dmk)
+                return True
+            y = i.y + i.height + 1
+        return False
+
+    def free(self, dmk):
+        if dmk in self.pool:
+            self.pool.remove(dmk)
+            return True
+        return False
+
+    def setup_ctx(self, width, height):
+        self.width = width
+        self.height = height
+
+    def get_slots(self):
+        raise NotImplementedError
+
+
+class AllocaotrLayerRight2Left(AllocaotrLayerBase):
+    def get_slots(self):
+        base_line = [i for i in self.pool if self.conflict_start(i)]
+        return sorted(base_line, key=lambda x: x.y)
+
+    def conflict_start(self, dmk):
+        return dmk.width + dmk.x + HORIZONTAL_PADDING > self.width
+
+
+class AllocaotrLayerLeft2Right(AllocaotrLayerBase):
+    def get_slots(self):
+        base_line = [i for i in self.pool if self.conflict_start(i)]
+        print base_line
+        return sorted(base_line, key=lambda x: x.y)
+
+    def conflict_start(self, dmk):
+        return dmk.x - HORIZONTAL_PADDING < 0
+
+
+class AllocaotrLayerTop(AllocaotrLayerBase):
+    def get_slots(self):
+        return sorted(self.pool, key=lambda x: x.y)
+
+
+class AllocaotrLayerBottom(AllocaotrLayerBase):
+    def get_slots(self):
+        return sorted(self.pool, key=lambda x: x.y, reverse=True)
+
+
+class Allocaotr(object):
+    def __init__(self, layer_cls):
+        self.layers = {}
+        self.layer_cls = layer_cls
+        self.width = None
+        self.height = None
+
+    def allocate(self, dmk):
+        for i in self.layers:
+            if self.layers[i].allocate(dmk):
+                return
+        print 'new'
+        idx = len(self.layers)
+        offset = self.gen_offset(idx)
+        self.layers[idx] = self.layer_cls(offset)
+        self.layers[idx].setup_ctx(self.width, self.height)
+
+        self.layers[idx].allocate(dmk)
+
+    def free(self, dmk):
+        for i in self.layers.values():
+            if i.free(dmk):
+                return True
+        return False
+
+    def gen_offset(self, idx):
+        return idx * 10 / self.height
+
+    def setup_ctx(self, width, height):
+        self.width = width
+        self.height = height
+        for i in self.layers.values():
+            i.setup_ctx(width, height)
+
+
+DANMAKU_MAP = {
+    danmaku.D_MODE_RIGHT2LEFT: DanmakuRight2Left,
+    danmaku.D_MODE_LEFT2RIGHT: DanmakuLeft2Right,
+    danmaku.D_MODE_BOTTOM: DanmakuBottom,
+    danmaku.D_MODE_TOP: DanmakuTop,
+}
+ALLOCATOR_MAP = {
+    danmaku.D_MODE_RIGHT2LEFT: Allocaotr(AllocaotrLayerRight2Left),
+    danmaku.D_MODE_LEFT2RIGHT: Allocaotr(AllocaotrLayerLeft2Right),
+    danmaku.D_MODE_BOTTOM: Allocaotr(AllocaotrLayerBottom),
+    danmaku.D_MODE_TOP: Allocaotr(AllocaotrLayerTop),
+}
 
 
 class DanmakuManager(Clutter.Actor):
@@ -101,8 +300,8 @@ class DanmakuManager(Clutter.Actor):
 
         GLib.timeout_add(20, self.timer)
 
-    def set_stream(self, host, port):
-        self._stream = DanmakuStream(host, port)
+    def set_stream(self, url):
+        self._stream = danmaku.DanmakuStream(url)
 
     def resume(self):
         self.is_playing = True
@@ -127,19 +326,19 @@ class DanmakuManager(Clutter.Actor):
                 new_danmakus.append(i)
             else:
                 self.remove_child(i)
+                allocator = ALLOCATOR_MAP.get(i.mode)
+                allocator.free(i)
+
         self._danmakus = new_danmakus
         self.last_time = now
         return True
 
     def tick(self, tick):
-        now = time.time() * 1000
         dmks = self._stream.get_danmakus(tick)
-        dmks = [DanmakuWrapper(
-            i.setup_ctx(self.width, self.height).start(now))
-            for i in dmks
-        ]
-        [self.add_child(i) for i in dmks]
-        self._danmakus.extend(dmks)
+        for i in dmks:
+            dmk_obj = self.danmaku_builder(i)
+            self.add_child(dmk_obj)
+            self._danmakus.append(dmk_obj)
 
     def state_change(self, *arg):
         self.set_bounds()
@@ -148,10 +347,32 @@ class DanmakuManager(Clutter.Actor):
     def set_bounds(self, *arg):
         stage = self.get_stage()
 
-        self.width = stage.get_height()
-        self.height = stage.get_width()
+        if self.height == stage.get_height() and\
+                self.width == stage.get_width():
+            return
+
+        self.height = stage.get_height()
+        self.width = stage.get_width()
 
         # Set actor dimensions
         self.set_position(0, 0)
         self.set_size(self.width, self.height)
+
+        map(
+            lambda x: x.setup_ctx(self.width, self.height),
+            ALLOCATOR_MAP.values()
+        )
+        [i.setup_ctx(self.width, self.height) for i in self._danmakus]
         return False
+
+    def danmaku_builder(self, cfg):
+        mode = cfg['mode']
+        dmk_cls = DANMAKU_MAP.get(mode)
+        if not dmk_cls:
+            raise NotImplementedError
+        dmk = dmk_cls(cfg['text'], cfg.get('color'), cfg.get('size'))
+        dmk.setup_ctx(self.width, self.height).start()
+
+        allocator = ALLOCATOR_MAP.get(mode)
+        allocator.allocate(dmk)
+        return dmk
