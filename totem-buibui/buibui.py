@@ -114,16 +114,19 @@ class Danmaku(Clutter.Group):
         self.add_child(shadow)
         return shadow
 
+DANMAKU_TTL = 5000
+
 
 class DanmakuRight2Left(Danmaku):
     mode = danmaku.D_MODE_RIGHT2LEFT
 
     def start(self):
         self.x = self._s_width
+        self.speed = self._s_width * 1.0 / DANMAKU_TTL
         return self
 
     def update(self, duration):
-        self.x -= 1
+        self.x -= self.speed * duration
         if self.x + self.width < 0:
             return False
         return True
@@ -134,6 +137,7 @@ class DanmakuLeft2Right(Danmaku):
 
     def start(self):
         self.x = - self.width
+        self.speed = self._s_width * 1.0 / DANMAKU_TTL
         return self
 
     def update(self, duration):
@@ -142,19 +146,16 @@ class DanmakuLeft2Right(Danmaku):
             return False
         return True
 
-TTL = 3000
-
 
 class DanmakuTop(Danmaku):
     mode = danmaku.D_MODE_TOP
 
     def start(self):
         self.x = int((self._s_width - self.width) / 2)
-        print self.x
         return self
 
     def update(self, duration):
-        return self.duration < TTL
+        return self.duration < DANMAKU_TTL
 
 
 class DanmakuBottom(Danmaku):
@@ -165,7 +166,7 @@ class DanmakuBottom(Danmaku):
         return self
 
     def update(self, duration):
-        return self.duration < TTL
+        return self.duration < DANMAKU_TTL
 
 
 HORIZONTAL_PADDING = 20
@@ -179,14 +180,8 @@ class AllocaotrLayerBase(object):
     def allocate(self, dmk):
         base_line = self.get_slots()
         y = self.offset
-        if len(base_line) == 0:
-            dmk.y = y
-            self.pool.add(dmk)
-            return True
-
         for i in base_line:
-            if (i.y > y and i.y + i.height > y) or\
-                    (y > i.y and y + dmk.height > i.y):
+            if i.y > y and i.y > dmk.height + y:
                 dmk.y = y
                 self.pool.add(dmk)
                 return True
@@ -207,9 +202,16 @@ class AllocaotrLayerBase(object):
         raise NotImplementedError
 
 
+class DummyDanmaku(object):
+    def __init__(self, offset):
+        self.y = offset
+        self.height = 0
+
+
 class AllocaotrLayerRight2Left(AllocaotrLayerBase):
     def get_slots(self):
         base_line = [i for i in self.pool if self.conflict_start(i)]
+        base_line.append(DummyDanmaku(self.height))
         return sorted(base_line, key=lambda x: x.y)
 
     def conflict_start(self, dmk):
@@ -219,7 +221,7 @@ class AllocaotrLayerRight2Left(AllocaotrLayerBase):
 class AllocaotrLayerLeft2Right(AllocaotrLayerBase):
     def get_slots(self):
         base_line = [i for i in self.pool if self.conflict_start(i)]
-        print base_line
+        base_line.append(DummyDanmaku(self.height))
         return sorted(base_line, key=lambda x: x.y)
 
     def conflict_start(self, dmk):
@@ -228,12 +230,27 @@ class AllocaotrLayerLeft2Right(AllocaotrLayerBase):
 
 class AllocaotrLayerTop(AllocaotrLayerBase):
     def get_slots(self):
-        return sorted(self.pool, key=lambda x: x.y)
+        base_line = list(self.pool)
+        base_line.append(DummyDanmaku(self.height))
+        return sorted(base_line, key=lambda x: x.y)
 
 
 class AllocaotrLayerBottom(AllocaotrLayerBase):
+    def allocate(self, dmk):
+        base_line = self.get_slots()
+        y = self.height - dmk.height - self.offset
+        for i in base_line:
+            if i.y + i.height < y and i.y < y:
+                dmk.y = y
+                self.pool.add(dmk)
+                return True
+            y = i.y - dmk.height - 1
+        return False
+
     def get_slots(self):
-        return sorted(self.pool, key=lambda x: x.y, reverse=True)
+        base_line = list(self.pool)
+        base_line.append(DummyDanmaku(0))
+        return sorted(base_line, key=lambda x: x.y, reverse=True)
 
 
 class Allocaotr(object):
@@ -247,7 +264,6 @@ class Allocaotr(object):
         for i in self.layers:
             if self.layers[i].allocate(dmk):
                 return
-        print 'new'
         idx = len(self.layers)
         offset = self.gen_offset(idx)
         self.layers[idx] = self.layer_cls(offset)
@@ -262,7 +278,7 @@ class Allocaotr(object):
         return False
 
     def gen_offset(self, idx):
-        return idx * 10 / self.height
+        return idx * 15 % self.height
 
     def setup_ctx(self, width, height):
         self.width = width

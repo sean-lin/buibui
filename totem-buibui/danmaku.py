@@ -24,12 +24,5 @@ class DanmakuStream(object):
             "text": "hello world",
             'color': "#ffffff",
             "size": 25,
-            'mode': D_MODE_LEFT2RIGHT
-        },
-            {
-                "text": "hello world",
-                'color': "#ffffff",
-                "size": 25,
-                'mode': D_MODE_LEFT2RIGHT
-            }
-        ]
+            'mode': D_MODE_BOTTOM
+        }] * 10
