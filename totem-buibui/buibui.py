@@ -155,7 +155,6 @@ class DanmakuLeft2Right(Danmaku):
         return self
 
     def update(self, duration):
-        print duration
         self.x += self.speed * duration
         if self.x > self._s_width:
             return False
