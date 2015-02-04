@@ -18,7 +18,7 @@ class Buibui(GObject.Object, Peas.Activatable):
 
         video = self._totem.get_video_widget()
         self._dm = DanmakuManager(self._totem)
-        self._dm.set_stream('http://127.0.0.1/')
+        self._dm.set_stream('http://127.0.0.1/get_danmakus')
 
         video.get_stage().add_child(self._dm)
         video.get_toplevel().connect(
@@ -34,6 +34,7 @@ class Buibui(GObject.Object, Peas.Activatable):
 
     def do_deactivate(self):
         self._totem = None
+        self._dm.close()
 
     def play_handler(self, murl, user_data):
         self._dm.resume()
