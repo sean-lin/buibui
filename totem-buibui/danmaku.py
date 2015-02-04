@@ -22,13 +22,12 @@ class PullingThread(threading.Thread):
         self._url = url
         self.running = False
         self.queue = queue
-        self.last_time = time.time()
+        self.last_time = int(time.time() * 1000)
         super(PullingThread, self).__init__()
 
     def run(self):
         self.running = True
         while self.running:
-            print 'pulling'
             msgs = self.request()
             for i in msgs:
                 self.queue.put(i)
@@ -41,12 +40,12 @@ class PullingThread(threading.Thread):
         try:
             f = urllib.urlopen(self._url + '?ts=' + str(self.last_time))
             data = f.read()
-            print data
             msg = self.parse_data(data)
             if msg:
                 self.last_time = msg[-1]['ts']
             return msg
-        except:
+        except Exception as e:
+            print 'error', e
             return []
 
     def parse_data(self, data):

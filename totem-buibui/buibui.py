@@ -54,8 +54,14 @@ class Buibui(GObject.Object, Peas.Activatable):
 
 class Danmaku(Clutter.Group):
     DEFAULT_FONT = 'SimHei'
+    FONT_SIZE_MAP = {
+        1: 0.05,
+        2: 0.1,
+        3: 0.15,
+        4: 0.2,
+    }
 
-    def __init__(self, text, color="#ffffff", size=25):
+    def __init__(self, width, height, text, color="#ffffff", size=1):
         super(Danmaku, self).__init__()
 
         # orgion configure
@@ -68,8 +74,8 @@ class Danmaku(Clutter.Group):
         self.duration = 0
         self.x = None
         self.y = None
-        self._s_width = None
-        self._s_height = None
+        self._s_width = width
+        self._s_height = height
 
         # clutters
         self._shadowBR = self.build_shadow(+2, +2)
@@ -101,7 +107,9 @@ class Danmaku(Clutter.Group):
             return False
 
     def get_font_string(self):
-        return "%s %d" % (self.font_name, self.size)
+        return "%s %d" % (
+            self.font_name,
+            int(self.FONT_SIZE_MAP[self.size] * self._s_height))
 
     def build_shadow(self, x, y):
         return self.build_text_clutter("#000000", x, y)
@@ -116,6 +124,7 @@ class Danmaku(Clutter.Group):
         return shadow
 
 DANMAKU_TTL = 5000
+MAX_SPEED = 150.0 / 1000
 
 
 class DanmakuRight2Left(Danmaku):
@@ -124,6 +133,8 @@ class DanmakuRight2Left(Danmaku):
     def start(self):
         self.x = self._s_width
         self.speed = self._s_width * 1.0 / DANMAKU_TTL
+        if self.speed > MAX_SPEED:
+            self.speed = MAX_SPEED
         return self
 
     def update(self, duration):
@@ -139,10 +150,13 @@ class DanmakuLeft2Right(Danmaku):
     def start(self):
         self.x = - self.width
         self.speed = self._s_width * 1.0 / DANMAKU_TTL
+        if self.speed > MAX_SPEED:
+            self.speed = MAX_SPEED
         return self
 
     def update(self, duration):
-        self.x += 1
+        print duration
+        self.x += self.speed * duration
         if self.x > self._s_width:
             return False
         return True
@@ -387,8 +401,10 @@ class DanmakuManager(Clutter.Actor):
         dmk_cls = DANMAKU_MAP.get(mode)
         if not dmk_cls:
             raise NotImplementedError
-        dmk = dmk_cls(cfg['text'], cfg.get('color'), cfg.get('size'))
-        dmk.setup_ctx(self.width, self.height).start()
+        dmk = dmk_cls(
+            self.width, self.height,
+            cfg['text'], cfg.get('color'), cfg.get('size'))
+        dmk.start()
 
         allocator = ALLOCATOR_MAP.get(mode)
         allocator.allocate(dmk)
