@@ -100,12 +100,20 @@ body {
     color: rgba(0, 0, 0, 0.6);
 }
 
-#chat-area .success .header {
-    color: #356e36;
+#chat-area .item.success {
+    border-left: 3px solid #5BBD72;
 }
 
-#chat-area .error .header {
-    color: #912d2b;
+#chat-area .item.error {
+    border-left: 3px solid #D95C5C;
+}
+
+#chat-area .item.success .header {
+    color: #356E36;
+}
+
+#chat-area .item.error .header {
+    color: #912D2B;
 }
 
 @media (max-width: 383px) {

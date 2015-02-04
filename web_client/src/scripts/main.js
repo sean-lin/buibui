@@ -28,8 +28,12 @@ $(function() {
                                    .text(now() + ' 发送中……');
 
             var description = $('<div>').addClass('description')
-                                .css('font-size', message.size + 'px')
                                 .text(message.text);
+
+            if (message.size !== 0) {
+                description.css('font-size', 12 + (message.size * 2) + 'px');
+            }
+
             if (message.color !== '#FFFFFF') {
                 description.css('color', message.color);
             }
