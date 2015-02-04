@@ -85,30 +85,30 @@ body {
     margin-bottom: 10px;
     border-left: 3px solid #D4D4D5;
     padding-left: 10px;
+    padding-bottom: 0;
 }
 
 #chat-area .header {
     margin-bottom: 3px;
     font-weight: normal;
-    font-size: 13px;
+    font-size: 12px;
+    font-family: monospace;
 }
 
 #chat-area .description {
-    margin-bottom: 3px;
     font-weight: normal;
     color: rgba(0, 0, 0, 0.6);
 }
 
-#chat-area .user .header {
-    color: #3C763D;
+#chat-area .success .header {
+    color: #356e36;
 }
 
-#chat-area .system .header {
-    color: #b58105;
+#chat-area .error .header {
+    color: #912d2b;
 }
 
-
-@media (max-width: 360px) {
+@media (max-width: 383px) {
     .pref-area .ui.icon.button,
     .pref-area .ui.icon.buttons .button {
         padding: 7px;

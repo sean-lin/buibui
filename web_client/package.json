@@ -1,16 +1,8 @@
 {
-  "name": "battlenet-frontend",
-  "version": "1.0.0",
-  "description": "Battlenet admin panel frontend",
-  "author": "battlenet@ejoy.com",
-  "license": "EULA",
-  "devDependencies": {
-    "gulp": "3.8.10",
-    "gulp-connect": "2.2.0",
-    "gulp-less": "2.0.1",
-    "gulp-shell": "0.2.11"
-  },
-  "engines": {
-    "node": ">=0.10.0"
-  }
+    "name": "buibui-web_client",
+    "version": "1.0.0",
+    "devDependencies": {
+        "gulp": "3.8.10",
+        "gulp-connect": "2.2.0"
+    }
 }
