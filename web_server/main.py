@@ -3,20 +3,21 @@
 
 import time
 from pymongo import MongoClient
-from bson.json_util import dumps
-from bottle import Bottle, request, abort
+from bottle import Bottle, request, abort, static_file
 
 application = Bottle()
 
 db = MongoClient()['buibui']['danmaku']
-db.ensure_index({'ts': 1})
+db.ensure_index('ts')
 
 
 @application.route('/buibui/get_danmakus')
 def get_danmakus():
-    ts = request.params.ts
-    qset = db.find({'ts': {'$gt': ts}})
-    return {'danmakus': [dumps(i) for i in qset]}
+    ts = int(request.params.ts)
+    qset = list(db.find({'ts': {'$gt': ts}}))
+    for i in qset:
+        del i['_id']
+    return {'danmakus': qset}
 
 BUI_PARAMS = {
     'text': str,
@@ -26,18 +27,34 @@ BUI_PARAMS = {
 }
 
 
-@application.route('/buibui/bui')
+@application.post('/buibui/bui')
 def bui():
     data = request.params
     msg = {}
-    for k, t in BUI_PARAMS.iteritems:
+    for k, t in BUI_PARAMS.iteritems():
         v = data.get(k)
-        if not isinstance(v, t):
+        if not v:
             abort(400, 'params error')
-        msg[k] = v
-    msg['ts'] = time.time()
+        msg[k] = t(v)
+    msg['ts'] = int(time.time() * 1000)
     db.insert(msg)
     return 'ok'
+
+
+@application.route('/bower_components/<path:path>')
+def server_bower_components(path):
+    return static_file(path, root='../web_client/bower_components')
+
+
+@application.route('/')
+def server_index():
+    return static_file('index.html', root='../web_client/src')
+
+
+@application.route('/<path:path>')
+def server_src(path):
+    return static_file(path, root='../web_client/src')
+
 
 if __name__ == '__main__':
     application.run(host='0.0.0.0', port=8080, debug=True, reloader=True)

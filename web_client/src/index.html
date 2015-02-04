@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title></title>
+<link rel="stylesheet" href="bower_components/semantic-ui/dist/semantic.min.css">
+<link rel="stylesheet" href="styles/main.css">
+<script src="bower_components/jquery/dist/jquery.min.js"></script>
+<script src="bower_components/semantic-ui/dist/semantic.min.js"></script>
+<script src="scripts/main.js"></script>
+</head>
+<body>
+
+<div id="wrap">
+
+    <div id="input-area">
+
+        <div class="ui left icon input">
+            <input placeholder="输入消息……" type="text">
+            <i class="icon comments outline"></i>
+        </div>
+
+        <div class="circular basic ui icon button">
+            <i class="icon send outline"></i>
+        </div>
+
+    </div>
+
+    <div class="pref-area">
+
+        <div id="color-group" class="ui basic icon buttons">
+            <div class="ui button active" data-value="#FFFFFF">
+                <i class="circle thin icon"></i>
+            </div>
+            <div class="ui button" data-value="#D95C5C">
+                <i class="circle red icon"></i>
+            </div>
+            <div class="ui button" data-value="#E07B53">
+                <i class="circle orange icon"></i>
+            </div>
+            <div class="ui button" data-value="#F2C61F">
+                <i class="circle yellow icon"></i>
+            </div>
+            <div class="ui button" data-value="#5BBD72">
+                <i class="circle green icon"></i>
+            </div>
+            <div class="ui button" data-value="#00B5AD">
+                <i class="circle teal icon"></i>
+            </div>
+            <div class="ui button" data-value="#3B83C0">
+                <i class="circle blue icon"></i>
+            </div>
+            <div class="ui button" data-value="#564F8A">
+                <i class="circle purple icon"></i>
+            </div>
+            <div class="ui button" data-value="#D9499A">
+                <i class="circle pink icon"></i>
+            </div>
+        </div>
+
+        <div id="size-group" class="ui basic icon buttons">
+            <div class="ui button active" data-value="14">
+                <span>小</span>
+            </div>
+            <div class="ui button" data-value="24">
+                <span>中</span>
+            </div>
+            <div class="ui button" data-value="34">
+                <span>大</span>
+            </div>
+        </div>
+
+        <div id="mode-group" class="ui basic icon buttons">
+            <div class="ui button active" data-value="0">
+                <i class="arrow left icon"></i></div>
+            <div class="ui button" data-value="1">
+                <i class="arrow right icon"></i>
+            </div>
+            <div class="ui button" data-value="2">
+                <i class="caret up icon"></i>
+            </div>
+            <div class="ui button" data-value="3">
+                <i class="caret down icon"></i>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="chat-area">
+        <div class="ui list"></div>
+    </div>
+
+</div>
+
+</body>
+</html>

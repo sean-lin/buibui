@@ -1,0 +1,12 @@
+{
+    "name": "danmaku-client",
+    "version": "1.0.0",
+    "authors": [
+        "battlenet@ejoy.com"
+    ],
+    "license": "EULA",
+    "private": true,
+    "dependencies": {
+        "semantic-ui": "~1.8.1"
+    }
+}

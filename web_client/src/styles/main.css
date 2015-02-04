@@ -1,0 +1,116 @@
+body {
+    overflow: hidden;
+    margin: auto;
+    min-width: 320px;
+    font-family: sans-serif;
+}
+
+#wrap {
+    background-color: #FFFFFF;
+    height: 100%;
+    display: -webkit-box;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-box-orient: vertical;
+    -webkit-box-direction: normal;
+    -webkit-flex-direction: column;
+        -ms-flex-direction: column;
+            flex-direction: column;
+}
+
+/* input-area */
+
+#input-area {
+    padding: 5px;
+    background-color: #E9FAFF;
+    display: -webkit-box;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-flex-shrink: 0;
+        -ms-flex-negative: 0;
+            flex-shrink: 0;
+}
+
+#input-area .input {
+    -webkit-box-flex: 1;
+    -webkit-flex-grow: 1;
+        -ms-flex-positive: 1;
+            flex-grow: 1;
+}
+
+#input-area .button {
+    background-color: #FFFFFF !important;
+    margin: 0 0 0 3px;
+}
+
+/* pref-area */
+
+.pref-area {
+    padding: 0 0 5px 2px;
+    border-top: 1px solid #D4D4D5;
+    background-color: #F0F0F0;
+    display: -webkit-box;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-flex-wrap: wrap;
+        -ms-flex-wrap: wrap;
+            flex-wrap: wrap;
+    -webkit-flex-shrink: 0;
+        -ms-flex-negative: 0;
+            flex-shrink: 0;
+}
+
+.pref-area .buttons {
+    background-color: #FFFFFF;
+    margin-left: 3px;
+    margin-top: 5px;
+}
+
+/* chat-area */
+
+#chat-area {
+    overflow: auto;
+    border-top: 1px solid #D4D4D5;
+    padding: 10px;
+    -webkit-box-flex: 1;
+    -webkit-flex-grow: 1;
+        -ms-flex-positive: 1;
+            flex-grow: 1;
+}
+
+#chat-area .item {
+    margin-bottom: 10px;
+    border-left: 3px solid #D4D4D5;
+    padding-left: 10px;
+}
+
+#chat-area .header {
+    margin-bottom: 3px;
+    font-weight: normal;
+    font-size: 13px;
+}
+
+#chat-area .description {
+    margin-bottom: 3px;
+    font-weight: normal;
+    color: rgba(0, 0, 0, 0.6);
+}
+
+#chat-area .user .header {
+    color: #3C763D;
+}
+
+#chat-area .system .header {
+    color: #b58105;
+}
+
+
+@media (max-width: 360px) {
+    .pref-area .ui.icon.button,
+    .pref-area .ui.icon.buttons .button {
+        padding: 7px;
+    }
+}
