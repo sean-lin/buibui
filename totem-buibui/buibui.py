@@ -18,7 +18,7 @@ class Buibui(GObject.Object, Peas.Activatable):
 
         video = self._totem.get_video_widget()
         self._dm = DanmakuManager(self._totem)
-        self._dm.set_stream('http://127.0.0.1/get_danmakus')
+        self._dm.set_stream('http://127.0.0.1:8080/buibui/get_danmakus')
 
         video.get_stage().add_child(self._dm)
         video.get_toplevel().connect(

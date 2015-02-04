@@ -41,16 +41,17 @@ class PullingThread(threading.Thread):
         try:
             f = urllib.urlopen(self._url + '?ts=' + str(self.last_time))
             data = f.read()
+            print data
             msg = self.parse_data(data)
             if msg:
                 self.last_time = msg[-1]['ts']
-        except Exception as e:
-            print e
+            return msg
+        except:
             return []
 
     def parse_data(self, data):
         msg = json.loads(data)
-        msg = sorted(msg, key=lambda x: x['ts'])
+        msg = sorted(msg['danmakus'], key=lambda x: x['ts'])
         return msg
 
 
