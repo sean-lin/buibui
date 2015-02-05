@@ -46,6 +46,11 @@ def server_bower_components(path):
     return static_file(path, root='../web_client/bower_components')
 
 
+@application.route('/player/<path:path>')
+def player_src(path):
+    return static_file(path, root='../web_player/src')
+
+
 @application.route('/')
 def server_index():
     return static_file('index.html', root='../web_client/src')
@@ -54,7 +59,6 @@ def server_index():
 @application.route('/<path:path>')
 def server_src(path):
     return static_file(path, root='../web_client/src')
-
 
 if __name__ == '__main__':
     application.run(host='0.0.0.0', port=8080, debug=True, reloader=True)
