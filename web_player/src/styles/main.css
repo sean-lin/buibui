@@ -1,0 +1,12 @@
+body {
+    padding: 0;
+    margin: 0;
+    background-color: #000000;
+}
+
+#video_player {
+    width: 100%;
+    position: fixed;
+    height: 100%;
+    z-index: -99;
+}
