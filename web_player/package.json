@@ -1,0 +1,12 @@
+{
+    "name": "Bubble",
+    "version": "1.0.0",
+    "description": "A html5 game",
+    "author": "battlenet@ejoy.com",
+    "license": "EULA",
+    "devDependencies": {
+    },
+    "engines": {
+        "node": ">=0.10.0"
+    }
+}

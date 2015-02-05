@@ -1,0 +1,21 @@
+{
+  "name": "Bubble",
+  "version": "1",
+  "authors": [
+    "bettlenet@ejoy.com"
+  ],
+  "description": "A html5 game",
+  "license": "EULA",
+  "homepage": "www.ejoy.com",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "phaser": "~2.1.1"
+  }
+}
