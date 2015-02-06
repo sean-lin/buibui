@@ -9,6 +9,16 @@ var SHEIGHT = 1080;
 
 var game = new Phaser.Game(SWIDTH, SHEIGHT, Phaser.ATUO, GameRootId, null, true);
 
+var blackBorderStyle = {
+    strokeThickness: 2,
+    stroke: '#000000',
+};
+
+var whiteBorderStyle = {
+    strokeThickness: 2,
+    stroke: '#FFFFFF',
+};
+
 var playState = (function() {
   var D_MODE_RIGHT2LEFT = 0;
   var D_MODE_LEFT2RIGHT = 1;
@@ -218,7 +228,14 @@ var playState = (function() {
     },
     
     danmaku_builder: function(msg) {
-      var text = game.add.text(0, 0, msg.text);
+      var borderStyle;
+      if (msg.color === '#FFFFFF') {
+          borderStyle = blackBorderStyle;
+      } else {
+          borderStyle = whiteBorderStyle
+      }
+
+      var text = game.add.text(0, 0, msg.text, borderStyle);
       text.anchor.set(0);
       text.align = 'left';
 

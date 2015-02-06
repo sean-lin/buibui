@@ -87,7 +87,7 @@ $(function() {
         return message;
     };
 
-    var sendMessage = function(message, index) {
+    var postMessage = function(message, index) {
         $.post('/buibui/bui', message).done(function() {
             chatArea.animate({scrollTop: 0}, 200);
             chatAreaOps.success(index);
@@ -96,13 +96,23 @@ $(function() {
         });
     };
 
-    $('#input-area .button').click(function() {
+    var sendMessage = function() {
         var message = takeMessage();
         if (!message) {
             return;
         }
         var index = chatAreaOps.add(message);
-        sendMessage(message, index);
+        postMessage(message, index);
+    };
+
+    $("#input-area input").keyup(function(event){
+        if (event.keyCode === 13){
+            sendMessage();
+        }
+    });
+
+    $('#input-area .button').click(function() {
+        sendMessage();
     });
 
 });
