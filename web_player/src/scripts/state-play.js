@@ -175,6 +175,7 @@ var playState = (function() {
 
   return {
     preload: function(){
+      game.stage.disableVisibilityChange = true;
       game.scale.maxWidth = 1920;
       game.scale.maxHeight = 1080;
 
@@ -272,4 +273,3 @@ var playState = (function() {
 
 game.state.add('play', playState);
 game.state.start('play');
-
