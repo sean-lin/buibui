@@ -6,17 +6,14 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Diagnostics;
 
 namespace uwp_player
 {
     using LitJson;
-    using System.Diagnostics;
     using System.IO;
     using System.Net;
-    using System.Windows.Threading;    /// <summary>
-                                       /// MainWindow.xaml 的交互逻辑
-                                       /// </summary>
-
+    using System.Windows.Threading;
     using Position = Tuple<double, double>;
 
     public class DanmakuConfig {
@@ -35,13 +32,101 @@ namespace uwp_player
         Bottom = 3,
     };
 
+    public class DanmakuLib
+    {
+        public static Tuple<bool, double> getSlotFromTop(Size danmakuSize, double offset, double screenHeight, List<Position> barrier)
+        {
+            barrier.Add(new Position(screenHeight, 0));
+            barrier.Sort(positionCmp);
+
+            var y = offset;
+            foreach (var i in barrier)
+            {
+                if (i.Item1 > y && i.Item1 > danmakuSize.Height + y)
+                {
+                    return new Tuple<bool, double>(true, y);
+                }
+                y = i.Item1 + i.Item2 + 1;
+            }
+            return new Tuple<bool, double>(false, 0);
+        }
+
+        public static Tuple<bool, double> getSlotFromBottom(Size danmakuSize, double offset, double screenHeight, List<Position> barrier)
+        {
+            barrier.Add(new Position(0, 0));
+            barrier.Sort(positionCmp);
+            barrier.Reverse();
+
+            var y = screenHeight - danmakuSize.Height - offset;
+            foreach (var i in barrier)
+            {
+                if (i.Item1 + i.Item2 < y && i.Item1 < y)
+                {
+                    return new Tuple<bool, double>(true, y);
+                }
+                y = i.Item1 - danmakuSize.Height - 1;
+            }
+            return new Tuple<bool, double>(false, 0);
+        }
+
+        public static void attachHorizontalTransform(TextBlock tb, EventHandler handler, Point pos, double start, double end, int ttl)
+        {
+            TranslateTransform trans = new TranslateTransform();
+            AnimationTimeline ani = new DoubleAnimation(start, end, TimeSpan.FromSeconds(ttl));
+            ani.Completed += handler;
+            trans.X = pos.X;
+            trans.Y = pos.Y;
+            tb.RenderTransform = trans;
+
+            trans.BeginAnimation(TranslateTransform.XProperty, ani);
+        }
+
+        public static void attachStaticTransform(TextBlock tb, EventHandler handler, Point pos, int ttl)
+        {
+            TranslateTransform trans = new TranslateTransform();
+            trans.Y = pos.Y;
+            trans.X = pos.X;
+            tb.RenderTransform = trans;
+
+            var timer = new DispatcherTimer() { Interval = TimeSpan.FromSeconds(ttl) };
+            timer.Tick += (sender, args) => {
+                handler(sender, args);
+                timer.Stop();
+            };
+            timer.Start();
+        }
+
+        public static List<Position> getPosition(List<TextBlock> tbs)
+        {
+            var ret = new List<Position>();
+            foreach (var i in tbs) {
+                var y = ((TranslateTransform)i.RenderTransform).Y;
+                ret.Add(new Position(y, i.DesiredSize.Height));
+            }
+            return ret;
+        }
+
+        protected static int positionCmp(Position x, Position y)
+        {
+            if (x.Item1 > y.Item1)
+            {
+                return 1;
+            }
+            else if (x.Item1 < y.Item1)
+            {
+                return -1;
+            }
+            return 0;
+        }
+    }
+
     public interface IDanmakuAllocator
     {
         bool allocate(TextBlock tb);
         bool free(TextBlock tb);
     }
 
-    public class DanmakuLayerAllocator : IDanmakuAllocator
+    public abstract class DanmakuLayerAllocator : IDanmakuAllocator
     {
         protected Canvas canvas;
         protected double offset;
@@ -56,22 +141,18 @@ namespace uwp_player
 
         public virtual bool allocate(TextBlock tb)
         {
-            var height = tb.DesiredSize.Height;
-
-            var barrier = getBarrierPos();
-            var y = offset;
-            foreach(var i in barrier)
-            {
-                if(i.Item1 > y && i.Item1 > height + y)
+            var ret = allocateY(tb.DesiredSize);
+            if (ret.Item1) {
+                attachTransform(tb, (s, a) =>
                 {
-                    bindTranslateTransform(tb, y);
-                    return true;
-                }
-                y = i.Item1 + i.Item2 + 1;
+                    free(tb);
+                }, ret.Item2);
+                canvas.Children.Add(tb);
+                pool.Add(tb);
+                return true;
             }
             return false;
         }
-
         public virtual bool free(TextBlock tb)
         {
             if (this.pool.Remove(tb))
@@ -82,68 +163,30 @@ namespace uwp_player
             return false;
         }
 
+        protected abstract Tuple<bool, double> allocateY(Size size);
 
-        // 获取出可能阻挡新弹幕的旧弹幕
-        protected virtual List<Position> getBarrierPos()
+        protected abstract void attachTransform(TextBlock tb, EventHandler handler, double y);
+
+    }
+
+    public class DanmakuRight2LeftLayerAllocator: DanmakuLayerAllocator
+    { 
+        public DanmakuRight2LeftLayerAllocator(Canvas c, double offset): base(c, offset) { }
+
+        protected override Tuple<bool, double> allocateY(Size size)
         {
-            var ret = new List<Position>();
-            List<TextBlock> base_line = getBarrier();
-
-            base_line.ForEach((i) =>
-            {
-                var y = ((TranslateTransform)i.RenderTransform).Y;
-                ret.Add(new Position(y, i.DesiredSize.Height));
-            });
-            ret.Add(new Position(canvas.Height, 0));
-            ret.Sort(positionCmp);
-            return ret;
-        }
-
-        protected int positionCmp(Position x, Position y)
-        {
-            if (x.Item1 > y.Item1)
-            {
-                return 1;
-            }
-            else if (x.Item1 < y.Item1)
-            {
-                return -1;
-            }
-            return 0;
-        }
-
-        protected virtual List<TextBlock> getBarrier()
-        {
-            return pool.FindAll((i) =>
+            // 获取出可能阻挡新弹幕的旧弹幕
+            var barrier = DanmakuLib.getPosition(pool.FindAll((i) =>
             {
                 var x = ((TranslateTransform)i.RenderTransform).X;
                 return i.DesiredSize.Width + x + DanmakuConfig.HORIZONTAL_PADDING > canvas.Width;
-            });
+            }));
+            return DanmakuLib.getSlotFromTop(size, offset, canvas.Height, barrier);
         }
-
-        protected virtual void bindTranslateTransform(TextBlock tb, double y)
+        protected override void attachTransform(TextBlock tb, EventHandler handler, double y)
         {
-
-            TranslateTransform trans = new TranslateTransform();
-            AnimationTimeline ani = genAnimation();
-            ani.Completed += (s, a) =>
-            {
-                free(tb);
-            };
-            trans.Y = y;
-            trans.BeginAnimation(TranslateTransform.XProperty, ani);
-
-            tb.RenderTransform = trans;
-
-            canvas.Children.Add(tb);
-            this.pool.Add(tb);
-
-            trans.BeginAnimation(TranslateTransform.XProperty, ani);
-        }
-
-        protected virtual AnimationTimeline genAnimation()
-        {
-            return new DoubleAnimation(canvas.Width, 0, TimeSpan.FromSeconds(DanmakuConfig.DANMAKU_TTL));
+            DanmakuLib.attachHorizontalTransform(tb, handler,
+                new Point(0, y), canvas.Width, -tb.DesiredSize.Width, DanmakuConfig.DANMAKU_TTL);
         }
     };
 
@@ -151,17 +194,19 @@ namespace uwp_player
     {
         public DanmakuLeft2RightLayerAllocator(Canvas c, double offset): base(c, offset) { }
 
-        protected override List<TextBlock> getBarrier()
+        protected override Tuple<bool, double> allocateY(Size size)
         {
-            return pool.FindAll((i) =>
+            var barrier = DanmakuLib.getPosition(pool.FindAll((i) =>
             {
                 var x = ((TranslateTransform)i.RenderTransform).X;
                 return x - DanmakuConfig.HORIZONTAL_PADDING < 0;
-            });
+            }));
+            return DanmakuLib.getSlotFromTop(size, offset, canvas.Height, barrier);
         }
-        protected override AnimationTimeline genAnimation()
+        protected override void attachTransform(TextBlock tb, EventHandler handler, double y)
         {
-            return new DoubleAnimation(0, canvas.Width, TimeSpan.FromSeconds(DanmakuConfig.DANMAKU_TTL));
+            DanmakuLib.attachHorizontalTransform(tb, handler,
+                new Point(0, y), -tb.DesiredSize.Width, canvas.Width, DanmakuConfig.DANMAKU_TTL);
         }
     }
 
@@ -169,65 +214,31 @@ namespace uwp_player
     {
         public DanmakuTopLayerAllocator(Canvas c, double offset) : base(c, offset) { }
 
-        protected override List<TextBlock> getBarrier()
+        protected override Tuple<bool, double> allocateY(Size size)
         {
-            return pool;
+            var barrier = DanmakuLib.getPosition(pool);
+            return DanmakuLib.getSlotFromTop(size, offset, canvas.Height, barrier);
         }
-
-        protected override void bindTranslateTransform(TextBlock tb, double y)
+        protected override void attachTransform(TextBlock tb, EventHandler handler, double y)
         {
-
-            TranslateTransform trans = new TranslateTransform();
-            trans.Y = y;
-            trans.X = (canvas.Width - tb.DesiredSize.Width) / 2;
-            tb.RenderTransform = trans;
-
-            canvas.Children.Add(tb);
-            this.pool.Add(tb);
-
-            var timer = new DispatcherTimer() { Interval = TimeSpan.FromSeconds(DanmakuConfig.DANMAKU_TTL)};
-            timer.Tick += (sender, args) => {
-                canvas.Children.Remove(tb);
-                timer.Stop();
-            };
-            timer.Start();
+            var x = (canvas.Width - tb.DesiredSize.Width) / 2;
+            DanmakuLib.attachStaticTransform(tb, handler, new Point(x, y), DanmakuConfig.DANMAKU_TTL);
         }
     }
-    public class DanmakuBottomLayerAllocator: DanmakuTopLayerAllocator
+
+    public class DanmakuBottomLayerAllocator: DanmakuLayerAllocator
     {
         public DanmakuBottomLayerAllocator(Canvas c, double offset) : base(c, offset) { }
 
-        public override bool allocate(TextBlock tb)
+        protected override Tuple<bool, double> allocateY(Size size)
         {
-            var height = tb.DesiredSize.Height;
-
-            var barrier = getBarrierPos();
-            var y = canvas.Height - height - offset;
-            foreach(var i in barrier)
-            {
-                if(i.Item1 + i.Item2 < y && i.Item1 < y)
-                {
-                    bindTranslateTransform(tb, y);
-                    return true;
-                }
-                y = i.Item1 - height - 1;
-            }
-            return false;
+            var barrier = DanmakuLib.getPosition(pool);
+            return DanmakuLib.getSlotFromBottom(size, offset, canvas.Height, barrier);
         }
-        protected override List<Position> getBarrierPos()
+        protected override void attachTransform(TextBlock tb, EventHandler handler, double y)
         {
-            var ret = new List<Position>();
-            List<TextBlock> base_line = getBarrier();
-
-            base_line.ForEach((i) =>
-            {
-                var y = ((TranslateTransform)i.RenderTransform).Y;
-                ret.Add(new Position(y, i.DesiredSize.Height));
-            });
-            ret.Add(new Position(0, 0));
-            ret.Sort(positionCmp);
-            ret.Reverse();
-            return ret;
+            var x = (canvas.Width - tb.DesiredSize.Width) / 2;
+            DanmakuLib.attachStaticTransform(tb, handler, new Point(x, y), DanmakuConfig.DANMAKU_TTL);
         }
     }
 
@@ -282,7 +293,7 @@ namespace uwp_player
                 case DanmakuMode.Left2Right:
                     return new DanmakuLeft2RightLayerAllocator(canvas, offset);
                 case DanmakuMode.Right2Left:
-                    return new DanmakuLayerAllocator(canvas, offset);
+                    return new DanmakuRight2LeftLayerAllocator(canvas, offset);
                 case DanmakuMode.Top:
                     return new DanmakuTopLayerAllocator(canvas, offset);
                 case DanmakuMode.Bottom:
@@ -305,7 +316,7 @@ namespace uwp_player
         public MainWindow()
         {
             InitializeComponent();
-            System.Windows.Threading.DispatcherTimer dispatcherTimer = new System.Windows.Threading.DispatcherTimer();
+            DispatcherTimer dispatcherTimer = new DispatcherTimer();
             dispatcherTimer.Tick += on_update_timer;
             dispatcherTimer.Interval = new TimeSpan(0, 0, DanmakuConfig.DANMAKU_SERVER_QUERY_INTERVAL);
             dispatcherTimer.Start();
@@ -321,9 +332,16 @@ namespace uwp_player
             wc = new WebClient();
             wc.OpenReadCompleted += (o, a) =>
             {
-                var stream = new StreamReader(a.Result);
-                var data = JsonMapper.ToObject<HttpReq>(stream.ReadToEnd());
-                processServerResponse(data.danmakus);
+                try
+                {
+                    var stream = new StreamReader(a.Result);
+                    var data = JsonMapper.ToObject<HttpReq>(stream.ReadToEnd());
+                    processServerResponse(data.danmakus);
+                }
+                catch (Exception)
+                {
+                    Debug.Print("rpc error");
+                }
             };
 
             TimeSpan t = DateTime.UtcNow - new DateTime(1970, 1, 1);
