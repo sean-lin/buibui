@@ -43,7 +43,9 @@ $(function() {
             var id = ('message-' + this.added);
             var item = $('<div>').attr('id', id).addClass('item');
             item.append(header).append(description);
-            item.prependTo(chatAreaList).hide().show('fast');
+            item.prependTo(chatAreaList)
+                .hide()
+                .animate({height: 'toggle'}, 'fast');
 
             return this.added;
         },
