@@ -115,4 +115,5 @@ $(function() {
         sendMessage();
     });
 
+    FastClick.attach(document.body);
 });
