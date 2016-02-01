@@ -20,7 +20,7 @@ namespace uwp_player
         public const int DANMAKU_TTL = 10;
         public const int HORIZONTAL_PADDING = 20;
         public const int LAYER_OFFSET = 15;
-        public const string DANMAKU_SERVER_URL = "http://172.16.100.117:8080/buibui/get_danmakus";
+        public const string DANMAKU_SERVER_URL = "http://dm.ejoy.com/buibui/get_danmakus";
         public const int DANMAKU_SERVER_QUERY_INTERVAL = 1;
     };
 
@@ -58,7 +58,6 @@ namespace uwp_player
             barrier.Reverse();
 
             var y = screenHeight - danmakuSize.Height - offset;
-            Debug.Print(String.Format("Y: {0}/{1}  height: {2}", y, screenHeight, danmakuSize.Height));
             foreach (var i in barrier)
             {
                 if (i.Item1 + i.Item2 < y && i.Item1 < y)
