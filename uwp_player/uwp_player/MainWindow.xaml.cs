@@ -58,6 +58,7 @@ namespace uwp_player
             barrier.Reverse();
 
             var y = screenHeight - danmakuSize.Height - offset;
+            Debug.Print(String.Format("Y: {0}/{1}  height: {2}", y, screenHeight, danmakuSize.Height));
             foreach (var i in barrier)
             {
                 if (i.Item1 + i.Item2 < y && i.Item1 < y)
@@ -101,7 +102,7 @@ namespace uwp_player
             var ret = new List<Position>();
             foreach (var i in tbs) {
                 var y = ((TranslateTransform)i.RenderTransform).Y;
-                ret.Add(new Position(y, i.DesiredSize.Height));
+                ret.Add(new Position(y, i.ActualHeight));
             }
             return ret;
         }
@@ -141,7 +142,8 @@ namespace uwp_player
 
         public virtual bool allocate(TextBlock tb)
         {
-            var ret = allocateY(tb.DesiredSize);
+            var size = new Size(tb.ActualHeight, tb.ActualWidth);
+            var ret = allocateY(size);
             if (ret.Item1) {
                 attachTransform(tb, (s, a) =>
                 {
@@ -179,14 +181,14 @@ namespace uwp_player
             var barrier = DanmakuLib.getPosition(pool.FindAll((i) =>
             {
                 var x = ((TranslateTransform)i.RenderTransform).X;
-                return i.DesiredSize.Width + x + DanmakuConfig.HORIZONTAL_PADDING > canvas.Width;
+                return i.ActualWidth + x + DanmakuConfig.HORIZONTAL_PADDING > canvas.Width;
             }));
             return DanmakuLib.getSlotFromTop(size, offset, canvas.Height, barrier);
         }
         protected override void attachTransform(TextBlock tb, EventHandler handler, double y)
         {
             DanmakuLib.attachHorizontalTransform(tb, handler,
-                new Point(0, y), canvas.Width, -tb.DesiredSize.Width, DanmakuConfig.DANMAKU_TTL);
+                new Point(0, y), canvas.Width, -tb.ActualWidth, DanmakuConfig.DANMAKU_TTL);
         }
     };
 
@@ -206,7 +208,7 @@ namespace uwp_player
         protected override void attachTransform(TextBlock tb, EventHandler handler, double y)
         {
             DanmakuLib.attachHorizontalTransform(tb, handler,
-                new Point(0, y), -tb.DesiredSize.Width, canvas.Width, DanmakuConfig.DANMAKU_TTL);
+                new Point(0, y), -tb.ActualWidth, canvas.Width, DanmakuConfig.DANMAKU_TTL);
         }
     }
 
@@ -221,8 +223,8 @@ namespace uwp_player
         }
         protected override void attachTransform(TextBlock tb, EventHandler handler, double y)
         {
-            var x = (canvas.Width - tb.DesiredSize.Width) / 2;
-            DanmakuLib.attachStaticTransform(tb, handler, new Point(x, y), DanmakuConfig.DANMAKU_TTL);
+            var x = (canvas.Width - tb.ActualWidth) / 2;
+            DanmakuLib.attachStaticTransform(tb, handler, new Point(x, y), DanmakuConfig.DANMAKU_TTL/2);
         }
     }
 
@@ -237,8 +239,8 @@ namespace uwp_player
         }
         protected override void attachTransform(TextBlock tb, EventHandler handler, double y)
         {
-            var x = (canvas.Width - tb.DesiredSize.Width) / 2;
-            DanmakuLib.attachStaticTransform(tb, handler, new Point(x, y), DanmakuConfig.DANMAKU_TTL);
+            var x = (canvas.Width - tb.ActualWidth) / 2;
+            DanmakuLib.attachStaticTransform(tb, handler, new Point(x, y), DanmakuConfig.DANMAKU_TTL/2);
         }
     }
 
@@ -371,9 +373,12 @@ namespace uwp_player
                 Foreground = new SolidColorBrush(color),
                 FontSize = size,
                 MinWidth = 0,
+                MinHeight = 0,
                 MaxWidth = double.PositiveInfinity,
+                MaxHeight = double.PositiveInfinity,
             };
-            tb.Measure(new Size());
+            tb.Measure(new Size(0, 0));
+            tb.Arrange(new Rect());
 
             allocators[mode].allocate(tb);
         }
@@ -384,6 +389,14 @@ namespace uwp_player
             {
                 var uri = new Uri(DanmakuConfig.DANMAKU_SERVER_URL + "?ts=" + last_time.ToString());
                 wc.OpenReadAsync(uri);
+            }
+            if (mCanvas.Width != Width)
+            {
+                mCanvas.Width = Width;
+            }
+            if (mCanvas.Height != Height)
+            {
+                mCanvas.Height = Height;
             }
         }
 

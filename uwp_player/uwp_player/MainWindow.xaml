@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:uwp_player"
         mc:Ignorable="d"
-        Title="MainWindow" Height="350" Width="525" Topmost="True" AllowsTransparency="True" WindowStyle="None" Foreground="{x:Null}">
+        Title="Buibui" Height="350" Width="525" Topmost="True" AllowsTransparency="True" WindowStyle="None" Foreground="{x:Null}" Icon="danmaku.ico" WindowState="Maximized" WindowStartupLocation="CenterScreen">
     <Window.Background>
         <SolidColorBrush Color="White" Opacity="0"/>
     </Window.Background>
