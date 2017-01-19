@@ -180,6 +180,10 @@ namespace uwp_player
             var barrier = DanmakuLib.getPosition(pool.FindAll((i) =>
             {
                 var x = ((TranslateTransform)i.RenderTransform).X;
+                if (x <= 0)
+                {
+                    x = canvas.Width;
+                }
                 return i.ActualWidth + x + DanmakuConfig.HORIZONTAL_PADDING > canvas.Width;
             }));
             return DanmakuLib.getSlotFromTop(size, offset, canvas.Height, barrier);
@@ -312,6 +316,7 @@ namespace uwp_player
         private Dictionary<DanmakuMode, IDanmakuAllocator> allocators;
         private WebClient wc;
         private long last_time;
+        private DateTime requestedTime;
         private Dictionary<int, double> font_map;
 
         public MainWindow()
@@ -323,6 +328,7 @@ namespace uwp_player
             dispatcherTimer.Start();
             mCanvas.Width = this.Width;
             mCanvas.Height = this.Height;
+            Deactivated += on_deactivated;
 
             allocators = new Dictionary<DanmakuMode, IDanmakuAllocator>();
             allocators.Add(DanmakuMode.Left2Right, new DanmakuAllocator(mCanvas, DanmakuMode.Left2Right));
@@ -355,6 +361,12 @@ namespace uwp_player
             font_map[4] = 0.15;
         }
 
+        private void on_deactivated(object sender=null, EventArgs e=null)
+        {
+            this.Topmost = true;
+            this.WindowState = WindowState.Maximized;
+        }
+
         protected override void OnKeyDown(KeyEventArgs e)
         {
             base.OnKeyDown(e);
@@ -384,10 +396,19 @@ namespace uwp_player
 
         private void on_update_timer(object sender, EventArgs e)
         {
+            if(wc.IsBusy){
+                TimeSpan t = DateTime.UtcNow - requestedTime;
+                if(t.TotalSeconds > 10)
+                {
+                    wc.CancelAsync();
+                }
+                
+            }
             if (!wc.IsBusy)
             {
                 var uri = new Uri(DanmakuConfig.DANMAKU_SERVER_URL + "?ts=" + last_time.ToString());
                 wc.OpenReadAsync(uri);
+                requestedTime = DateTime.UtcNow;
             }
             if (mCanvas.Width != Width)
             {
@@ -396,6 +417,10 @@ namespace uwp_player
             if (mCanvas.Height != Height)
             {
                 mCanvas.Height = Height;
+            }
+            if(this.WindowState != WindowState.Maximized)
+            {
+                this.WindowState = WindowState.Maximized;
             }
         }
 
