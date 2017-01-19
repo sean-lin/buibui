@@ -141,7 +141,7 @@ namespace uwp_player
 
         public virtual bool allocate(TextBlock tb)
         {
-            var size = new Size(tb.ActualHeight, tb.ActualWidth);
+            var size = tb.DesiredSize;
             var ret = allocateY(size);
             if (ret.Item1) {
                 attachTransform(tb, (s, a) =>
@@ -388,7 +388,7 @@ namespace uwp_player
                 MaxWidth = double.PositiveInfinity,
                 MaxHeight = double.PositiveInfinity,
             };
-            tb.Measure(new Size(0, 0));
+            tb.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
             tb.Arrange(new Rect());
 
             allocators[mode].allocate(tb);
