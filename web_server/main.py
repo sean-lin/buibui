@@ -19,6 +19,7 @@ def get_danmakus():
         del i['_id']
     return {'danmakus': qset}
 
+TEXT_MAX = 72
 BUI_PARAMS = {
     'text': str,
     'mode': int,
@@ -36,8 +37,14 @@ def bui():
         if not v:
             abort(400, 'params error')
         msg[k] = t(v)
+    msg['user'] = request.get_header('X-Ldap-User')
     msg['ts'] = int(time.time() * 1000)
-    db.insert(msg)
+    
+    text = msg['text']
+    for i in range(0, len(text), TEXT_MAX):
+        splited = msg.copy()
+        splited['text']  = text[i:i + TEXT_MAX]
+        db.insert(splited)
     return 'ok'
 
 
